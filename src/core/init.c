@@ -342,6 +342,9 @@ lwip_init(void)
 #endif
 
   /* Modules initialization */
+#if LWIP_TRACE
+  lwip_trace_init();
+#endif
   stats_init();
 #if !NO_SYS
   sys_init();

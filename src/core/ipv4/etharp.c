@@ -1124,6 +1124,7 @@ etharp_raw(struct netif *netif, const struct eth_addr *ethsrc_addr,
   if (p == NULL) {
     LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS,
                 ("etharp_raw: could not allocate pbuf for ARP request.\n"));
+    LWIP_ERR_TRACEL("etharp_raw: pbuf alloc");
     ETHARP_STATS_INC(etharp.memerr);
     return ERR_MEM;
   }

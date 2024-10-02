@@ -747,6 +747,7 @@ tcp_bind(struct tcp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port)
   pcb->local_port = port;
   TCP_REG(&tcp_bound_pcbs, pcb);
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_bind: bind to port %"U16_F"\n", port));
+  LWIP_TRACEF("tcp_bind port=%u", port);
   return ERR_OK;
 }
 
@@ -1081,6 +1082,15 @@ tcp_connect(struct tcp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port,
   LWIP_ERROR("tcp_connect: can only connect from state CLOSED", pcb->state == CLOSED, return ERR_ISCONN);
 
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_connect to port %"U16_F"\n", port));
+#if LWIP_TRACE
+  char trace_str[40];
+  trace_string_t ipaddr_str = TRACE_STRING_ALLOC(ipaddr_ntoa_r(&pcb->remote_ip, trace_str, sizeof(trace_str)));
+  if(ipaddr_str != NULL)
+  { 
+    LWIP_TRACEF("tcp_connect addr=%s port=%u", ipaddr_str, pcb->remote_port);
+    TRACE_STRING_FREE(ipaddr_str);
+  }                  
+#endif
   ip_addr_set(&pcb->remote_ip, ipaddr);
   pcb->remote_port = port;
 

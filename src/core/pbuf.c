@@ -334,6 +334,7 @@ pbuf_alloc_reference(void *payload, u16_t length, pbuf_type type)
     LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                 ("pbuf_alloc_reference: Could not allocate MEMP_PBUF for PBUF_%s.\n",
                  (type == PBUF_ROM) ? "ROM" : "REF"));
+    LWIP_ERR_TRACEL("pbuf_alloc_ref: Could not alloc MEMP_PBUF for PBUF");
     return NULL;
   }
   pbuf_init_alloced_pbuf(p, payload, length, length, type, 0);

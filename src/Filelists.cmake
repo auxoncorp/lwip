@@ -43,6 +43,7 @@ set(lwipcore_SRCS
     ${LWIP_DIR}/src/core/pbuf.c
     ${LWIP_DIR}/src/core/raw.c
     ${LWIP_DIR}/src/core/stats.c
+    ${LWIP_DIR}/src/core/trace.c
     ${LWIP_DIR}/src/core/sys.c
     ${LWIP_DIR}/src/core/altcp.c
     ${LWIP_DIR}/src/core/altcp_alloc.c

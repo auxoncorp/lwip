@@ -219,6 +219,8 @@ ip4_route(const ip4_addr_t *dest)
        If this is not good enough for you, use LWIP_HOOK_IP4_ROUTE() */
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_route: No route to %"U16_F".%"U16_F".%"U16_F".%"U16_F"\n",
                 ip4_addr1_16(dest), ip4_addr2_16(dest), ip4_addr3_16(dest), ip4_addr4_16(dest)));
+    LWIP_ERR_TRACEF("ip4_route: no route %u.%u.%u.%u",
+                ip4_addr1_16(dest), ip4_addr2_16(dest), ip4_addr3_16(dest), ip4_addr4_16(dest));
     IP_STATS_INC(ip.rterr);
     MIB2_STATS_INC(mib2.ipoutnoroutes);
     return NULL;
@@ -475,16 +477,19 @@ ip4_input(struct pbuf *p, struct netif *inp)
     if (iphdr_hlen < IP_HLEN) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                   ("ip4_input: short IP header (%"U16_F" bytes) received, IP packet dropped\n", iphdr_hlen));
+      LWIP_ERR_TRACEL("ip4_input: dropped-header");
     }
     if (iphdr_hlen > p->len) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                   ("IP header (len %"U16_F") does not fit in first pbuf (len %"U16_F"), IP packet dropped.\n",
                    iphdr_hlen, p->len));
+      LWIP_ERR_TRACEL("ip4_input: dropped-pbuf");
     }
     if (iphdr_len > p->tot_len) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                   ("IP (len %"U16_F") is longer than pbuf (len %"U16_F"), IP packet dropped.\n",
                    iphdr_len, p->tot_len));
+      LWIP_ERR_TRACEL("ip4_input: dropped-len");
     }
     /* free (drop) packet pbufs */
     pbuf_free(p);
@@ -501,6 +506,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
 
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                   ("Checksum (0x%"X16_F") failed, IP packet dropped.\n", inet_chksum(iphdr, iphdr_hlen)));
+      LWIP_ERR_TRACEL("ip4_input: dropped-checksum");
       ip4_debug_print(p);
       pbuf_free(p);
       IP_STATS_INC(ip.chkerr);
@@ -649,6 +655,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
     pbuf_free(p);
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("IP packet dropped since it was fragmented (0x%"X16_F") (while IP_REASSEMBLY == 0).\n",
                 lwip_ntohs(IPH_OFFSET(iphdr))));
+    LWIP_ERR_TRACEL("ip4_input: dropped-frag");
     IP_STATS_INC(ip.opterr);
     IP_STATS_INC(ip.drop);
     /* unsupported protocol feature */
@@ -666,6 +673,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
   if (iphdr_hlen > IP_HLEN) {
 #endif /* LWIP_IGMP */
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("IP packet dropped since there were IP options (while IP_OPTIONS_ALLOWED == 0).\n"));
+    LWIP_ERR_TRACEL("ip4_input: dropped-ip-options");
     pbuf_free(p);
     IP_STATS_INC(ip.opterr);
     IP_STATS_INC(ip.drop);
@@ -676,6 +684,11 @@ ip4_input(struct pbuf *p, struct netif *inp)
 #endif /* IP_OPTIONS_ALLOWED == 0 */
 
   /* send to upper layers */
+  LWIP_TRACEF("ip4_input src=%u.%u.%u.%u",
+      ip4_addr1_16_val(iphdr->src),
+      ip4_addr2_16_val(iphdr->src),
+      ip4_addr3_16_val(iphdr->src),
+      ip4_addr4_16_val(iphdr->src));
   LWIP_DEBUGF(IP_DEBUG, ("ip4_input: \n"));
   ip4_debug_print(p);
   LWIP_DEBUGF(IP_DEBUG, ("ip4_input: p->len %"U16_F" p->tot_len %"U16_F"\n", p->len, p->tot_len));
@@ -737,6 +750,7 @@ ip4_input(struct pbuf *p, struct netif *inp)
 #endif /* LWIP_ICMP */
 
           LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("Unsupported transport protocol %"U16_F"\n", (u16_t)IPH_PROTO(iphdr)));
+          LWIP_ERR_TRACEL("ip4_input: unsupported proto");
 
           IP_STATS_INC(ip.proterr);
           IP_STATS_INC(ip.drop);
@@ -894,6 +908,7 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
     /* generate IP header */
     if (pbuf_add_header(p, IP_HLEN)) {
       LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip4_output: not enough room for IP header in pbuf\n"));
+      LWIP_ERR_TRACEL("ip4_output: pbuf header room");
 
       IP_STATS_INC(ip.err);
       MIB2_STATS_INC(mib2.ipoutdiscards);
@@ -977,6 +992,11 @@ ip4_output_if_opt_src(struct pbuf *p, const ip4_addr_t *src, const ip4_addr_t *d
 
   IP_STATS_INC(ip.xmit);
 
+  LWIP_TRACEF("ip4_output dst=%u.%u.%u.%u", 
+      ip4_addr1_16_val(iphdr->dest),
+      ip4_addr2_16_val(iphdr->dest),
+      ip4_addr3_16_val(iphdr->dest),
+      ip4_addr4_16_val(iphdr->dest));
   LWIP_DEBUGF(IP_DEBUG, ("ip4_output_if: %c%c%"U16_F"\n", netif->name[0], netif->name[1], (u16_t)netif->num));
   ip4_debug_print(p);
 

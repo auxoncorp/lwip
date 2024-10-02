@@ -434,6 +434,7 @@ end:
 chkerr:
   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
               ("udp_input: UDP (or UDP Lite) datagram discarded due to failing checksum\n"));
+  LWIP_ERR_TRACEL("udp_input: discarded due to checksum");
   UDP_STATS_INC(udp.chkerr);
   UDP_STATS_INC(udp.drop);
   MIB2_STATS_INC(mib2.udpinerrors);
@@ -591,6 +592,15 @@ udp_sendto_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *dst_ip,
     ip_addr_debug_print(UDP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, dst_ip);
     LWIP_DEBUGF(UDP_DEBUG, ("\n"));
     UDP_STATS_INC(udp.rterr);
+#if LWIP_TRACE
+    char trace_str[40];
+    trace_string_t ipaddr_str = TRACE_STRING_ALLOC(ipaddr_ntoa_r(dst_ip, trace_str, sizeof(trace_str)));
+    if(ipaddr_str != NULL)
+    {
+      LWIP_ERR_TRACEF("udp_send: no route to %s", ipaddr_str);
+      TRACE_STRING_FREE(ipaddr_str);
+    }
+#endif
     return ERR_RTE;
   }
 #if LWIP_CHECKSUM_ON_COPY && CHECKSUM_GEN_UDP
@@ -748,6 +758,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
     err = udp_bind(pcb, &pcb->local_ip, pcb->local_port);
     if (err != ERR_OK) {
       LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("udp_send: forced port bind failed\n"));
+      LWIP_ERR_TRACEL("udp_send: forced port bind failed");
       return err;
     }
   }
@@ -763,6 +774,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
     /* new header pbuf could not be allocated? */
     if (q == NULL) {
       LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("udp_send: could not allocate header\n"));
+      LWIP_ERR_TRACEL("udp_send: could not allocate header");
       return ERR_MEM;
     }
     if (p->tot_len != 0) {
@@ -888,6 +900,7 @@ udp_sendto_if_src_chksum(struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *d
 
   LWIP_DEBUGF(UDP_DEBUG, ("udp_send: UDP checksum 0x%04"X16_F"\n", udphdr->chksum));
   LWIP_DEBUGF(UDP_DEBUG, ("udp_send: ip_output_if (,,,,0x%02"X16_F",)\n", (u16_t)ip_proto));
+  LWIP_TRACEF("udp_send dst_port=%u", dst_port);
   /* output to IP */
   NETIF_SET_HINTS(netif, &(pcb->netif_hints));
   err = ip_output_if_src(q, src_ip, dst_ip, ttl, pcb->tos, ip_proto, netif);
@@ -1027,6 +1040,7 @@ udp_bind(struct udp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port)
   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, ("udp_bind: bound to "));
   ip_addr_debug_print_val(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, pcb->local_ip);
   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, (", port %"U16_F")\n", pcb->local_port));
+  LWIP_TRACEF("udp_bind port=%u", pcb->local_port);
   return ERR_OK;
 }
 
@@ -1105,6 +1119,15 @@ udp_connect(struct udp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port)
   ip_addr_debug_print_val(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE,
                           pcb->remote_ip);
   LWIP_DEBUGF(UDP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_STATE, (", port %"U16_F")\n", pcb->remote_port));
+#if LWIP_TRACE
+  char trace_str[40];
+  trace_string_t ipaddr_str = TRACE_STRING_ALLOC(ipaddr_ntoa_r(&pcb->remote_ip, trace_str, sizeof(trace_str)));
+  if(ipaddr_str != NULL)
+  {
+    LWIP_TRACEF("udp_connect addr=%s port=%u", ipaddr_str, pcb->remote_port);
+    TRACE_STRING_FREE(ipaddr_str);
+  }
+#endif
 
   /* Insert UDP PCB into the list of active UDP PCBs. */
   for (ipcb = udp_pcbs; ipcb != NULL; ipcb = ipcb->next) {

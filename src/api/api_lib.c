@@ -156,6 +156,8 @@ netconn_new_with_proto_and_callback(enum netconn_type t, u8_t proto, netconn_cal
   if (conn != NULL) {
     err_t err;
 
+    LWIP_TRACEF("netconn_new type=%s", TRACE_NETCONN_TYPE_STRING(t));
+
     API_MSG_VAR_REF(msg).msg.n.proto = proto;
     API_MSG_VAR_REF(msg).conn = conn;
     err = netconn_apimsg(lwip_netconn_do_newconn, &API_MSG_VAR_REF(msg));
@@ -335,6 +337,13 @@ netconn_bind(struct netconn *conn, const ip_addr_t *addr, u16_t port)
   err = netconn_apimsg(lwip_netconn_do_bind, &API_MSG_VAR_REF(msg));
   API_MSG_VAR_FREE(msg);
 
+#if LWIP_TRACE
+  if(err != ERR_OK)
+  {
+    LWIP_ERR_TRACEF("netconn_bind failed err=%d", err);
+  }
+#endif
+
   return err;
 }
 
@@ -488,11 +497,13 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
   err = netconn_err(conn);
   if (err != ERR_OK) {
     /* return pending error */
+    LWIP_ERR_TRACEF("netconn_accept failed err=%d", err);
     return err;
   }
   if (!NETCONN_ACCEPTMBOX_WAITABLE(conn)) {
     /* don't accept if closed: this might block the application task
        waiting on acceptmbox forever! */
+    LWIP_ERR_TRACEF("netconn_accept failed err=%d", ERR_CLSD);
     return ERR_CLSD;
   }
 
@@ -522,6 +533,7 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
     if (lwip_netconn_is_deallocated_msg(accept_ptr)) {
       /* the netconn has been closed from another thread */
       API_MSG_VAR_FREE_ACCEPT(msg);
+      LWIP_ERR_TRACEF("netconn_accept failed err=%d", ERR_CONN);
       return ERR_CONN;
     }
   }
@@ -533,11 +545,13 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
   if (lwip_netconn_is_err_msg(accept_ptr, &err)) {
     /* a connection has been aborted: e.g. out of pcbs or out of netconns during accept */
     API_MSG_VAR_FREE_ACCEPT(msg);
+    LWIP_ERR_TRACEF("netconn_accept failed err=%d", err);
     return err;
   }
   if (accept_ptr == NULL) {
     /* connection has been aborted */
     API_MSG_VAR_FREE_ACCEPT(msg);
+    LWIP_ERR_TRACEF("netconn_accept failed err=%d", ERR_CLSD);
     return ERR_CLSD;
   }
   newconn = (struct netconn *)accept_ptr;
@@ -555,6 +569,7 @@ netconn_accept(struct netconn *conn, struct netconn **new_conn)
 #else /* LWIP_TCP */
   LWIP_UNUSED_ARG(conn);
   LWIP_UNUSED_ARG(new_conn);
+  LWIP_ERR_TRACEF("netconn_accept failed err=%d", ERR_ARG);
   return ERR_ARG;
 #endif /* LWIP_TCP */
 }
@@ -589,8 +604,10 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
     err_t err = netconn_err(conn);
     if (err != ERR_OK) {
       /* return pending error */
+      LWIP_ERR_TRACEF("netconn_recv failed err=%d", err);
       return err;
     }
+    LWIP_ERR_TRACEF("netconn_recv failed err=%d", ERR_CONN);
     return ERR_CONN;
   }
 
@@ -603,9 +620,11 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
       err = netconn_err(conn);
       if (err != ERR_OK) {
         /* return pending error */
+        LWIP_ERR_TRACEF("netconn_recv failed err=%d", err);
         return err;
       }
       if (conn->flags & NETCONN_FLAG_MBOXCLOSED) {
+        LWIP_ERR_TRACEF("netconn_recv failed err=%d", ERR_CONN);
         return ERR_CONN;
       }
       return ERR_WOULDBLOCK;
@@ -626,6 +645,7 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
     if (lwip_netconn_is_deallocated_msg(buf)) {
       /* the netconn has been closed from another thread */
       API_MSG_VAR_FREE_ACCEPT(msg);
+      LWIP_ERR_TRACEF("netconn_recv failed err=%d", ERR_CONN);
       return ERR_CONN;
     }
   }
@@ -644,6 +664,7 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
         /* connection closed translates to ERR_OK with *new_buf == NULL */
         return ERR_OK;
       }
+      LWIP_ERR_TRACEF("netconn_recv failed err=%d", err);
       return err;
     }
     len = ((struct pbuf *)buf)->tot_len;
@@ -666,6 +687,7 @@ netconn_recv_data(struct netconn *conn, void **new_buf, u8_t apiflags)
   API_EVENT(conn, NETCONN_EVT_RCVMINUS, len);
 
   LWIP_DEBUGF(API_LIB_DEBUG, ("netconn_recv_data: received %p, len=%"U16_F"\n", buf, len));
+  LWIP_TRACEF("netconn_recv type=%s len=%u", TRACE_NETCONN_TYPE_STRING(conn->type), len);
 
   *new_buf = buf;
   /* don't set conn->last_err: it's only ERR_OK, anyway */
@@ -878,12 +900,14 @@ netconn_recv(struct netconn *conn, struct netbuf **new_buf)
 
     buf = (struct netbuf *)memp_malloc(MEMP_NETBUF);
     if (buf == NULL) {
+      LWIP_ERR_TRACEF("netconn_recv failed err=%d", ERR_MEM);
       return ERR_MEM;
     }
 
     err = netconn_recv_data_tcp(conn, &p, 0);
     if (err != ERR_OK) {
       memp_free(MEMP_NETBUF, buf);
+      LWIP_ERR_TRACEF("netconn_recv failed err=%d", err);
       return err;
     }
     LWIP_ASSERT("p != NULL", p != NULL);
@@ -926,6 +950,7 @@ netconn_sendto(struct netconn *conn, struct netbuf *buf, const ip_addr_t *addr, 
     buf->port = port;
     return netconn_send(conn, buf);
   }
+  LWIP_ERR_TRACEF("netconn_sendto failed err=%d", ERR_VAL);
   return ERR_VAL;
 }
 
@@ -946,12 +971,20 @@ netconn_send(struct netconn *conn, struct netbuf *buf)
   LWIP_ERROR("netconn_send: invalid conn",  (conn != NULL), return ERR_ARG;);
 
   LWIP_DEBUGF(API_LIB_DEBUG, ("netconn_send: sending %"U16_F" bytes\n", buf->p->tot_len));
+  LWIP_TRACEF("netconn_send type=%s len=%u", TRACE_NETCONN_TYPE_STRING(conn->type), buf->p->tot_len);
 
   API_MSG_VAR_ALLOC(msg);
   API_MSG_VAR_REF(msg).conn = conn;
   API_MSG_VAR_REF(msg).msg.b = buf;
   err = netconn_apimsg(lwip_netconn_do_send, &API_MSG_VAR_REF(msg));
   API_MSG_VAR_FREE(msg);
+
+#if LWIP_TRACE
+  if(err != ERR_OK)
+  {
+    LWIP_ERR_TRACEF("netconn_send failed err=%d", err);
+  }
+#endif
 
   return err;
 }

@@ -40,6 +40,10 @@
 #include "lwip/arch.h"
 #include "lwip/opt.h"
 
+#if defined(LWIP_TRACE) && defined(LWIP_DEBUG)
+#error "LWIP_TRACE cannot be used with LWIP_DEBUG"
+#endif
+
 /**
  * @defgroup debugging_levels LWIP_DBG_MIN_LEVEL and LWIP_DBG_TYPES_ON values
  * @ingroup lwip_opts_debugmsg

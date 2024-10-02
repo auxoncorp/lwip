@@ -167,6 +167,7 @@ tcp_create_segment(const struct tcp_pcb *pcb, struct pbuf *p, u8_t hdrflags, u32
 
   if ((seg = (struct tcp_seg *)memp_malloc(MEMP_TCP_SEG)) == NULL) {
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_create_segment: no memory.\n"));
+    LWIP_ERR_TRACEL("tcp_create_segment: no memory");
     pbuf_free(p);
     return NULL;
   }
@@ -189,6 +190,7 @@ tcp_create_segment(const struct tcp_pcb *pcb, struct pbuf *p, u8_t hdrflags, u32
   /* build TCP header */
   if (pbuf_add_header(p, TCP_HLEN)) {
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_create_segment: no room for TCP header in pbuf.\n"));
+    LWIP_ERR_TRACEL("tcp_create_segment: no room for header in pbuf");
     TCP_STATS_INC(tcp.err);
     tcp_seg_free(seg);
     return NULL;
@@ -541,6 +543,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
           LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                       ("tcp_write : could not allocate memory for pbuf copy size %"U16_F"\n",
                        seglen));
+          LWIP_ERR_TRACEL("tcp_write : pbuf alloc");
           goto memerr;
         }
 #if TCP_OVERSIZE_DBGCHECK
@@ -564,6 +567,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
           if ((concat_p = pbuf_alloc(PBUF_RAW, seglen, PBUF_ROM)) == NULL) {
             LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                         ("tcp_write: could not allocate memory for zero-copy pbuf\n"));
+            LWIP_ERR_TRACEL("tcp_write: zero-copy pbuf alloc");
             goto memerr;
           }
           /* reference the non-volatile payload data */
@@ -609,6 +613,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
        * into pbuf */
       if ((p = tcp_pbuf_prealloc(PBUF_TRANSPORT, seglen + optlen, mss_local, &oversize, pcb, apiflags, queue == NULL)) == NULL) {
         LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_write : could not allocate memory for pbuf copy size %"U16_F"\n", seglen));
+        LWIP_ERR_TRACEL("tcp_write: pbuf copy alloc");
         goto memerr;
       }
       LWIP_ASSERT("tcp_write: check that first pbuf can hold the complete seglen",
@@ -626,6 +631,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
 #endif /* TCP_OVERSIZE */
       if ((p2 = pbuf_alloc(PBUF_TRANSPORT, seglen, PBUF_ROM)) == NULL) {
         LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_write: could not allocate memory for zero-copy pbuf\n"));
+        LWIP_ERR_TRACEL("tcp_write: pbuf zero-copy alloc");
         goto memerr;
       }
 #if TCP_CHECKSUM_ON_COPY
@@ -645,6 +651,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
          * well. */
         pbuf_free(p2);
         LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_write: could not allocate memory for header pbuf\n"));
+        LWIP_ERR_TRACEL("tcp_write: header pbuf alloc");
         goto memerr;
       }
       /* Concatenate the headers and data pbufs together. */
@@ -659,6 +666,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
     if (queuelen > LWIP_MIN(TCP_SND_QUEUELEN, TCP_SNDQUEUELEN_OVERFLOW)) {
       LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_write: queue too long %"U16_F" (%d)\n",
                   queuelen, (int)TCP_SND_QUEUELEN));
+      LWIP_ERR_TRACEL("tcp_write: queue too long");
       pbuf_free(p);
       goto memerr;
     }
@@ -878,6 +886,7 @@ tcp_split_unsent_seg(struct tcp_pcb *pcb, u16_t split)
   if (p == NULL) {
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                 ("tcp_split_unsent_seg: could not allocate memory for pbuf remainder %u\n", remainder));
+    LWIP_ERR_TRACEL("tcp_split_unsent_seg: alloc pbuf remainder");
     goto memerr;
   }
 
@@ -887,6 +896,7 @@ tcp_split_unsent_seg(struct tcp_pcb *pcb, u16_t split)
   if (pbuf_copy_partial(useg->p, (u8_t *)p->payload + optlen, remainder, offset ) != remainder) {
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                 ("tcp_split_unsent_seg: could not copy pbuf remainder %u\n", remainder));
+    LWIP_ERR_TRACEL("tcp_split_unsent_seg: copy pbuf remainder");
     goto memerr;
   }
 #if TCP_CHECKSUM_ON_COPY
@@ -916,6 +926,7 @@ tcp_split_unsent_seg(struct tcp_pcb *pcb, u16_t split)
     p = NULL; /* Freed by tcp_create_segment */
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
                 ("tcp_split_unsent_seg: could not create new TCP segment\n"));
+    LWIP_ERR_TRACEL("tcp_split_unsent_seg: create new segment");
     goto memerr;
   }
 
@@ -1470,6 +1481,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb, struct netif *netif
     /* This should not happen: rexmit functions should have checked this.
        However, since this function modifies p->len, we must not continue in this case. */
     LWIP_DEBUGF(TCP_RTO_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("tcp_output_segment: segment busy\n"));
+    LWIP_ERR_TRACEL("tcp_output_segment: segment busy");
     return ERR_OK;
   }
 

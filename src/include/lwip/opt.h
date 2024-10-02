@@ -50,6 +50,7 @@
  */
 #include "lwipopts.h"
 #include "lwip/debug.h"
+#include "lwip/trace.h"
 
 /**
  * @defgroup lwip_opts Options (lwipopts.h)
@@ -3522,5 +3523,14 @@
 /**
  * @}
  */
+
+/*
+   --------------------------------------------------
+   ---------- Tracing options ----------
+   --------------------------------------------------
+*/
+#if !defined LWIP_TRACE || defined __DOXYGEN__
+#define LWIP_TRACE                      0
+#endif
 
 #endif /* LWIP_HDR_OPT_H */

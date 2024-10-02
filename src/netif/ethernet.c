@@ -109,6 +109,7 @@ ethernet_input(struct pbuf *p, struct netif *netif)
                (unsigned char)ethhdr->src.addr[0],  (unsigned char)ethhdr->src.addr[1],  (unsigned char)ethhdr->src.addr[2],
                (unsigned char)ethhdr->src.addr[3],  (unsigned char)ethhdr->src.addr[4],  (unsigned char)ethhdr->src.addr[5],
                lwip_htons(ethhdr->type)));
+  LWIP_TRACEF("ethernet_input type=0x%X", lwip_htons(ethhdr->type));
 
   type = ethhdr->type;
 #if ETHARP_SUPPORT_VLAN
@@ -307,6 +308,7 @@ ethernet_output(struct netif * netif, struct pbuf * p,
               (netif->hwaddr_len == ETH_HWADDR_LEN));
   LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE,
               ("ethernet_output: sending packet %p\n", (void *)p));
+  LWIP_TRACEF("ethernet_output type=0x%X", eth_type);
 
   /* send the packet */
   return netif->linkoutput(netif, p);
@@ -314,6 +316,7 @@ ethernet_output(struct netif * netif, struct pbuf * p,
 pbuf_header_failed:
   LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS,
               ("ethernet_output: could not allocate room for header.\n"));
+  LWIP_ERR_TRACEL("ethernet_output: header alloc");
   LINK_STATS_INC(link.lenerr);
   return ERR_BUF;
 }

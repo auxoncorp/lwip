@@ -548,11 +548,13 @@ ip6_input(struct pbuf *p, struct netif *inp)
       LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
         ("IPv6 header (len %"U16_F") does not fit in first pbuf (len %"U16_F"), IP packet dropped.\n",
             (u16_t)IP6_HLEN, p->len));
+      LWIP_ERR_TRACEL("ip6: dropped due to header >= pbuf");
     }
     if ((IP6H_PLEN(ip6hdr) + IP6_HLEN) > p->tot_len) {
       LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
         ("IPv6 (plen %"U16_F") is longer than pbuf (len %"U16_F"), IP packet dropped.\n",
             (u16_t)(IP6H_PLEN(ip6hdr) + IP6_HLEN), p->tot_len));
+      LWIP_ERR_TRACEL("ip6: dropped due to plen >= pbuf");
     }
     /* free (drop) packet pbufs */
     pbuf_free(p);
@@ -730,6 +732,7 @@ netif_found:
         LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
           ("IPv6 options header (hlen %"U16_F") does not fit in first pbuf (len %"U16_F"), IPv6 packet dropped.\n",
               hlen, p->len));
+        LWIP_ERR_TRACEL("ip6: dropped due to options header");
         /* free (drop) packet pbufs */
         pbuf_free(p);
         IP6_STATS_INC(ip6.lenerr);
@@ -819,6 +822,7 @@ netif_found:
         LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
           ("IPv6 options header (hlen %"U16_F") does not fit in first pbuf (len %"U16_F"), IPv6 packet dropped.\n",
               hlen, p->len));
+        LWIP_ERR_TRACEL("ip6: dropped due to options header");
         /* free (drop) packet pbufs */
         pbuf_free(p);
         IP6_STATS_INC(ip6.lenerr);
@@ -913,6 +917,7 @@ netif_found:
         LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
           ("IPv6 options header (hlen %"U16_F") does not fit in first pbuf (len %"U16_F"), IPv6 packet dropped.\n",
               hlen, p->len));
+        LWIP_ERR_TRACEL("ip6: dropped due to options header");
         /* free (drop) packet pbufs */
         pbuf_free(p);
         IP6_STATS_INC(ip6.lenerr);
@@ -973,6 +978,7 @@ netif_found:
         LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS,
           ("IPv6 options header (hlen %"U16_F") does not fit in first pbuf (len %"U16_F"), IPv6 packet dropped.\n",
               hlen, p->len));
+        LWIP_ERR_TRACEL("ip6: dropped due to options header");
         /* free (drop) packet pbufs */
         pbuf_free(p);
         IP6_FRAG_STATS_INC(ip6_frag.lenerr);
@@ -1045,6 +1051,17 @@ options_done:
   LWIP_DEBUGF(IP6_DEBUG, ("ip6_input: \n"));
   ip6_debug_print(p);
   LWIP_DEBUGF(IP6_DEBUG, ("ip6_input: p->len %"U16_F" p->tot_len %"U16_F"\n", p->len, p->tot_len));
+#if LWIP_TRACE
+  char trace_str[40];
+  ip6_addr_t trace_dst;
+  ip6_addr_copy_from_packed(trace_dst, ip6hdr->src);
+  trace_string_t ip6addr_str = TRACE_STRING_ALLOC(ip6addr_ntoa_r(&trace_dst, trace_str, sizeof(trace_str)));
+  if(ip6addr_str != NULL)
+  {
+    LWIP_TRACEF("ip6_input src=%s", ip6addr_str);
+    TRACE_STRING_FREE(ip6addr_str);
+  }
+#endif
 
   ip_data.current_ip_header_tot_len = hlen_tot;
   
@@ -1099,6 +1116,7 @@ options_done:
         }
 #endif /* LWIP_ICMP */
         LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip6_input: Unsupported transport protocol %"U16_F"\n", (u16_t)IP6H_NEXTH(ip6hdr)));
+        LWIP_ERR_TRACEL("ip6_input: unsupported proto");
         IP6_STATS_INC(ip6.proterr);
         IP6_STATS_INC(ip6.drop);
       }
@@ -1234,6 +1252,17 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
 
   LWIP_DEBUGF(IP6_DEBUG, ("ip6_output_if: %c%c%"U16_F"\n", netif->name[0], netif->name[1], (u16_t)netif->num));
   ip6_debug_print(p);
+#if LWIP_TRACE
+  char trace_str[40];
+  ip6_addr_t trace_dst;
+  ip6_addr_copy_from_packed(trace_dst, ip6hdr->dest);
+  trace_string_t ip6addr_str = TRACE_STRING_ALLOC(ip6addr_ntoa_r(&trace_dst, trace_str, sizeof(trace_str)));
+  if(ip6addr_str != NULL)
+  {
+    LWIP_TRACEF("ip6_output dst=%s", ip6addr_str);
+    TRACE_STRING_FREE(ip6addr_str);
+  }
+#endif
 
 #if ENABLE_LOOPBACK
   {

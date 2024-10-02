@@ -41,6 +41,7 @@ COREFILES=$(LWIPDIR)/core/init.c \
 	$(LWIPDIR)/core/pbuf.c \
 	$(LWIPDIR)/core/raw.c \
 	$(LWIPDIR)/core/stats.c \
+	$(LWIPDIR)/core/trace.c \
 	$(LWIPDIR)/core/sys.c \
 	$(LWIPDIR)/core/altcp.c \
 	$(LWIPDIR)/core/altcp_alloc.c \

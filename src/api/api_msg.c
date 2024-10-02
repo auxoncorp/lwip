@@ -1221,6 +1221,8 @@ lwip_netconn_do_bind(void *m)
   struct api_msg *msg = (struct api_msg *)m;
   err_t err;
 
+  LWIP_TRACEF("netconn_bind type=%s", TRACE_NETCONN_TYPE_STRING(msg->conn->type));
+
   if (msg->conn->pcb.tcp != NULL) {
     switch (NETCONNTYPE_GROUP(msg->conn->type)) {
 #if LWIP_RAW
@@ -1354,6 +1356,8 @@ lwip_netconn_do_connect(void *m)
 {
   struct api_msg *msg = (struct api_msg *)m;
   err_t err;
+
+  LWIP_TRACEF("netconn_connect type=%s", TRACE_NETCONN_TYPE_STRING(msg->conn->type));
 
   if (msg->conn->pcb.tcp == NULL) {
     /* This may happen when calling netconn_connect() a second time */

@@ -621,6 +621,7 @@ mem_free(void *rmem)
 
   if (rmem == NULL) {
     LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("mem_free(p == NULL) was called.\n"));
+    LWIP_ERR_TRACEL("mem_free: already called");
     return;
   }
   if ((((mem_ptr_t)rmem) & (MEM_ALIGNMENT - 1)) != 0) {
@@ -972,6 +973,7 @@ mem_malloc_adjust_lfree:
   LWIP_MEM_ALLOC_UNPROTECT();
   sys_mutex_unlock(&mem_mutex);
   LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("mem_malloc: could not allocate %"S16_F" bytes\n", (s16_t)size));
+  LWIP_ERR_TRACEF("mem_malloc: failed to alloc %u", size);
   return NULL;
 }
 
@@ -1003,6 +1005,7 @@ mem_calloc(mem_size_t count, mem_size_t size)
 
   if ((size_t)(mem_size_t)alloc_size != alloc_size) {
     LWIP_DEBUGF(MEM_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("mem_calloc: could not allocate %"SZT_F" bytes\n", alloc_size));
+    LWIP_ERR_TRACEF("mem_calloc: failed to alloc %u", alloc_size);
     return NULL;
   }
 

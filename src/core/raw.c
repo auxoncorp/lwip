@@ -467,6 +467,7 @@ raw_sendto_if_src(struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *dst_ip,
     /* new header pbuf could not be allocated? */
     if (q == NULL) {
       LWIP_DEBUGF(RAW_DEBUG | LWIP_DBG_TRACE | LWIP_DBG_LEVEL_SERIOUS, ("raw_sendto: could not allocate header\n"));
+      LWIP_ERR_TRACEL("raw_sendto: could not allocate header");
       return ERR_MEM;
     }
     if (p->tot_len != 0) {
